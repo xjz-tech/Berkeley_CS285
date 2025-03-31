@@ -102,6 +102,8 @@ class MLPPolicyPG(MLPPolicy):
 
         # TODO: implement the policy gradient actor update.
         log_pi = self.forward(obs).log_prob(actions)
+        print("obs", obs)
+        print("actions", actions)
         print("shape of log_pi", log_pi.shape)
         print("shape of advantages", advantages.shape)
         loss = torch.neg(torch.mean(torch.mul(log_pi, advantages)))

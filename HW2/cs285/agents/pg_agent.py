@@ -7,7 +7,7 @@ from cs285.networks.critics import ValueCritic
 from cs285.infrastructure import pytorch_util as ptu
 from torch import nn
 import sys
-sys.path.append('/workspace/HW2/cs285')
+sys.path.append('/home/xjz/Berkeley_CS285/HW2/cs285')
 
 
 class PGAgent(nn.Module):
@@ -91,7 +91,18 @@ class PGAgent(nn.Module):
         # step 4: if needed, use all datapoints (s_t, a_t, q_t) to update the PG critic/baseline
         if self.critic is not None:
             # TODO: perform `self.baseline_gradient_steps` updates to the critic/baseline network
-            critic_info: dict = None
+            critic_info: dict = {}
+            for _ in range(self.baseline_gradient_steps):
+                critic_update_info = self.critic.update(obs, q_values)
+                for k, v in critic_update_info.items():
+                    if k not in critic_info:
+                        critic_info[k] = v
+                    else:
+                        critic_info[k] += v
+            
+            # 计算均值
+            for k in critic_info:
+                critic_info[k] /= self.baseline_gradient_steps
 
             info.update(critic_info)
 
@@ -130,12 +141,13 @@ class PGAgent(nn.Module):
             advantages = q_values.copy()
         else:
             # TODO: run the critic and use it as a baseline
-            values = None
+            obs_tensor = ptu.from_numpy(obs)
+            values = ptu.to_numpy(self.critic(obs_tensor))
             assert values.shape == q_values.shape
 
             if self.gae_lambda is None:
                 # TODO: if using a baseline, but not GAE, what are the advantages?
-                advantages = None
+                advantages = q_values - values
             else:
                 # TODO: implement GAE
                 batch_size = obs.shape[0]
@@ -143,19 +155,27 @@ class PGAgent(nn.Module):
                 # HINT: append a dummy T+1 value for simpler recursive calculation
                 values = np.append(values, [0])
                 advantages = np.zeros(batch_size + 1)
+                rewards = np.append(rewards, [0])  # 添加一个虚拟的最后奖励为0
 
                 for i in reversed(range(batch_size)):
                     # TODO: recursively compute advantage estimates starting from timestep T.
                     # HINT: use terminals to handle edge cases. terminals[i] is 1 if the state is the last in its
                     # trajectory, and 0 otherwise.
-                    pass
+                    if terminals[i]:
+                        # 如果是终止状态，则delta = r_t + gamma * V(s_{t+1}) - V(s_t) = r_t - V(s_t)，因为终止状态的下一个状态的价值为0
+                        delta = rewards[i] - values[i]
+                        advantages[i] = delta
+                    else:
+                        # 非终止状态，根据GAE公式计算
+                        delta = rewards[i] + self.gamma * values[i+1] - values[i]
+                        advantages[i] = delta + self.gamma * self.gae_lambda * advantages[i+1]
 
                 # remove dummy advantage
                 advantages = advantages[:-1]
 
         # TODO: normalize the advantages to have a mean of zero and a standard deviation of one within the batch
         if self.normalize_advantages:
-            pass
+            advantages = (advantages - np.mean(advantages)) / (np.std(advantages) + 1e-8)
 
         return advantages
 
