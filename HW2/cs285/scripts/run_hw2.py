@@ -114,7 +114,7 @@ def run_training_loop(args):
 
             logger.flush()
 
-        if args.video_log_freq != -1 and itr % args.video_log_freq == 0:
+        if args.video_log_freq != -1 and itr % args.video_log_freq == 0 and itr != 0:
             print("\nCollecting video rollouts...")
             eval_video_trajs = utils.sample_n_trajectories(
                 env, agent.actor, MAX_NVIDEO, max_ep_len, render=True
@@ -127,6 +127,7 @@ def run_training_loop(args):
                 max_videos_to_save=MAX_NVIDEO,
                 video_title="eval_rollouts",
             )
+            logger.flush()
 
 
 def main():

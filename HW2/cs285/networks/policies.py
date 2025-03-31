@@ -101,6 +101,7 @@ class MLPPolicyPG(MLPPolicy):
         advantages = ptu.from_numpy(advantages)
 
         # TODO: implement the policy gradient actor update.
+        self.optimizer.zero_grad()
         log_pi = self.forward(obs).log_prob(actions)
         print("obs", obs)
         print("actions", actions)
@@ -111,7 +112,7 @@ class MLPPolicyPG(MLPPolicy):
 
         # TODO: optimize `loss` using `self.optimizer`
         # HINT: remember to `zero_grad` first
-        self.optimizer.zero_grad()
+        
         loss.backward()
         self.optimizer.step()
 
