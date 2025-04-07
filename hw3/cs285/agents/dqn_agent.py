@@ -70,8 +70,11 @@ class DQNAgent(nn.Module):
         # Compute target values
         with torch.no_grad():
             # TODO(student): compute target values
-            next_qa_values = self.target_critic(next_obs)
-
+            next_qa_values = self.target_critic(next_obs)  
+            # get Q values for all actions, then select the Q value for the action they took
+            # the dim of next_qa_values is (batch_size, num_actions)
+            # which means that the dim of last layer is num_actions
+            
 
             if self.use_double_q:
                 next_action = torch.argmax(self.critic(next_obs), dim=1)
