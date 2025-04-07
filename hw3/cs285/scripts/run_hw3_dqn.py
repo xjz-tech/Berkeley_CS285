@@ -91,19 +91,22 @@ def run_training_loop(config: dict, logger: Logger, args: argparse.Namespace):
         epsilon = exploration_schedule.value(step)
         
         # TODO(student): Compute action
-        action = ...
+        action = agent.get_action(observation, epsilon)
 
         # TODO(student): Step the environment
+        next_observation, reward, done, info = env.step(action)
 
         next_observation = np.asarray(next_observation)
         truncated = info.get("TimeLimit.truncated", False)
 
         # TODO(student): Add the data to the replay buffer
         if isinstance(replay_buffer, MemoryEfficientReplayBuffer):
+            replay_buffer.insert(action=action, reward=reward, next_observation=next_observation, done=done)
             # We're using the memory-efficient replay buffer,
             # so we only insert next_observation (not observation)
             ...
         else:
+            replay_buffer.insert(observation=observation, action=action, reward=reward, next_observation=next_observation, done=done)
             # We're using the regular replay buffer
             ...
 
@@ -119,13 +122,18 @@ def run_training_loop(config: dict, logger: Logger, args: argparse.Namespace):
         # Main DQN training loop
         if step >= config["learning_starts"]:
             # TODO(student): Sample config["batch_size"] samples from the replay buffer
-            batch = ...
+            batch = replay_buffer.sample(config["batch_size"])
 
             # Convert to PyTorch tensors
             batch = ptu.from_numpy(batch)
 
             # TODO(student): Train the agent. `batch` is a dictionary of numpy arrays,
-            update_info = ...
+            update_info = agent.update( obs=batch["observations"],
+                                        action=batch["actions"],
+                                        reward=batch["rewards"],
+                                        next_obs=batch["next_observations"],
+                                        done=batch["dones"],
+                                        step=step)
 
             # Logging code
             update_info["epsilon"] = epsilon
